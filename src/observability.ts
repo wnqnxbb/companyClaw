@@ -1,23 +1,24 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { RuntimeConfig, RuntimeSession } from "./types.js";
+import type { RuntimeConfig, RuntimeSession, TraceRecord } from "./types.js";
 
 type LogPayload = Record<string, unknown>;
-
-type TraceRecord = {
-  ts: string;
-  runId: string;
-  type: string;
-} & LogPayload;
 
 export class RunLogger {
   readonly filePath: string;
   private readonly consoleEnabled: boolean;
+  private readonly onRecord?: (record: TraceRecord) => void | Promise<void>;
+  private seq = 0;
   private writeChain: Promise<void> = Promise.resolve();
 
-  constructor(filePath: string, consoleEnabled: boolean) {
+  constructor(
+    filePath: string,
+    consoleEnabled: boolean,
+    onRecord?: (record: TraceRecord) => void | Promise<void>,
+  ) {
     this.filePath = filePath;
     this.consoleEnabled = consoleEnabled;
+    this.onRecord = onRecord;
   }
 
   async init(): Promise<void> {
@@ -26,6 +27,7 @@ export class RunLogger {
 
   log(type: string, payload: LogPayload): Promise<void> {
     const record: TraceRecord = {
+      seq: ++this.seq,
       ts: new Date().toISOString(),
       runId: String(payload.runId),
       type,
@@ -36,6 +38,9 @@ export class RunLogger {
       await fs.appendFile(this.filePath, line, "utf8");
       if (this.consoleEnabled) {
         renderTraceToConsole(record);
+      }
+      if (this.onRecord) {
+        await this.onRecord(record);
       }
     });
     return this.writeChain;
@@ -76,13 +81,14 @@ export async function createRunLogger(params: {
   config: RuntimeConfig;
   runId: string;
   consoleEnabled: boolean;
+  onRecord?: (record: TraceRecord) => void | Promise<void>;
 }): Promise<RunLogger | null> {
   if (!params.config.runtime.observability.enabled) {
     return null;
   }
   const logDir = path.resolve(params.config.stateDir, params.config.runtime.observability.logDir);
   const filePath = path.join(logDir, "runs", `${params.runId}.jsonl`);
-  const logger = new RunLogger(filePath, params.consoleEnabled);
+  const logger = new RunLogger(filePath, params.consoleEnabled, params.onRecord);
   await logger.init();
   return logger;
 }

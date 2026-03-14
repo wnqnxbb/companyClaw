@@ -2,10 +2,30 @@
 
 import { Command } from "commander";
 import { runAgent } from "./runtime.js";
+import { startHttpServer } from "./server/http.js";
 
 async function main(): Promise<void> {
   const program = new Command();
   program.name("companyclaw").description("Minimal standalone code-agent runtime");
+
+  program
+    .command("serve")
+    .option("--host <host>", "HTTP bind host", "127.0.0.1")
+    .option("--port <port>", "HTTP bind port", "18789")
+    .action(async (options: Record<string, unknown>) => {
+      const host = typeof options.host === "string" ? options.host : "127.0.0.1";
+      const port = Number.parseInt(String(options.port ?? "18789"), 10);
+      const started = await startHttpServer({
+        host,
+        port: Number.isFinite(port) ? port : 18789,
+      });
+      process.stdout.write(`${JSON.stringify({
+        ok: true,
+        host: started.host,
+        port: started.port,
+        baseUrl: started.baseUrl,
+      }, null, 2)}\n`);
+    });
 
   program
     .command("agent")

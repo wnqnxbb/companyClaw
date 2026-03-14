@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { buildSystemPrompt } from "./prompt.js";
 import { loadConfig } from "./config.js";
 import { attachSessionObservability, createRunLogger } from "./observability.js";
+import { resolveWithinRoot } from "./fs-utils.js";
 import { resolveSession, updateSessionEntry } from "./session/store.js";
 import { createRuntimeTools } from "./tools/index.js";
 import { defaultRuntimeSdk, extractAssistantText, repairTrailingUserTurn } from "./sdk/pi.js";
@@ -61,6 +62,23 @@ async function runSingleAttempt(params: {
   }
 }
 
+function buildPromptMessage(input: AgentRunInput, workspaceDir: string): string {
+  const base = input.message.trim();
+  const paths = Array.isArray(input.paths) ? input.paths : [];
+  if (paths.length === 0) {
+    return base;
+  }
+  const resolvedPaths = paths.map((filePath) => resolveWithinRoot(workspaceDir, filePath));
+  return [
+    base,
+    "",
+    "Local paths attached to this request:",
+    ...resolvedPaths.map((filePath) => `- ${filePath}`),
+    "",
+    "If these paths are relevant, inspect them with the available tools before answering.",
+  ].join("\n");
+}
+
 export async function runAgent(
   input: AgentRunInput,
   options?: RunAgentOptions,
@@ -84,11 +102,12 @@ export async function runAgent(
     sessionKey: input.sessionKey,
     sessionId: input.sessionId,
   });
-  const runId = crypto.randomUUID();
+  const runId = options?.runId?.trim() || crypto.randomUUID();
   const logger = await createRunLogger({
     config,
     runId,
     consoleEnabled: options?.trace === true || config.runtime.observability.console === true,
+    onRecord: options?.onRecord,
   });
   await logger?.log("run.start", {
     runId,
@@ -106,6 +125,7 @@ export async function runAgent(
     tools,
     extraSystemPrompt: input.extraSystemPrompt,
   });
+  const promptMessage = buildPromptMessage(input, config.workspaceDir);
   if (config.runtime.observability.includePrompts) {
     await logger?.log("prompt.system", {
       runId,
@@ -113,7 +133,7 @@ export async function runAgent(
     });
     await logger?.log("prompt.user", {
       runId,
-      text: message,
+      text: promptMessage,
     });
   }
 
@@ -137,7 +157,7 @@ export async function runAgent(
         const text = await runSingleAttempt({
           config,
           selectedModel: candidate,
-          message,
+          message: promptMessage,
           sessionFile: resolvedSession.sessionFile,
           systemPrompt,
           sdk,
@@ -169,6 +189,7 @@ export async function runAgent(
           sessionKey: resolvedSession.sessionKey,
           sessionFile: resolvedSession.sessionFile,
           logFile: logger?.filePath,
+          runId,
           text,
           model: {
             provider: candidate.provider,

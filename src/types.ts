@@ -65,6 +65,7 @@ export type BootstrapFile = {
 
 export type AgentRunInput = {
   message: string;
+  paths?: string[];
   sessionKey?: string;
   sessionId?: string;
   workspaceDir?: string;
@@ -78,6 +79,7 @@ export type AgentRunEvent =
   | { type: "tool"; name: string; phase: "start" | "end"; detail?: string };
 
 export type AgentRunResult = {
+  runId?: string;
   sessionId: string;
   sessionKey: string;
   sessionFile: string;
@@ -92,9 +94,19 @@ export type AgentRunResult = {
 export type RunAgentOptions = {
   config?: RuntimeConfig;
   onEvent?: (event: AgentRunEvent) => void;
+  onRecord?: (record: TraceRecord) => void | Promise<void>;
   sdk?: RuntimeSdk;
   trace?: boolean;
+  runId?: string;
+  abortSignal?: AbortSignal;
 };
+
+export type TraceRecord = {
+  seq: number;
+  ts: string;
+  runId: string;
+  type: string;
+} & Record<string, unknown>;
 
 export type ToolResult = {
   content: Array<{ type: string; text?: string }>;

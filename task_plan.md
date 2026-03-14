@@ -2,13 +2,14 @@
 
 ## 目标
 
-实现一个独立可运行的最小通用代理 runtime，入口为本地 CLI，核心能力包含：
+实现一个独立可运行的最小通用代理 runtime，正式入口改为本机 HTTP 服务，核心能力包含：
 - 会话解析与持久化
 - 工作区 bootstrap 上下文
 - 基于 `@mariozechner/pi-coding-agent` 的 agent 执行
 - 通用代理工作区文件体系：`AGENTS.md`、`SOUL.md`、`USER.md`、`IDENTITY.md`、`TOOLS.md`、`BOOTSTRAP.md`、`MEMORY.md`
 - 最小本地工具集：`read`、`write`、`edit`、`apply_patch`、`exec`
 - 基础模型 fallback
+- 异步 Run API 与 SSE 事件流
 - 单元测试与构建脚本
 
 ## 阶段
@@ -28,7 +29,9 @@
 - 状态目录：工作区内 `.companyclaw/`
 - 默认会话键：`main`
 - 默认产品定位：通用代理，不收窄为 coding agent
-- MVP 不实现 Gateway、channel、UI、plugin、subagent
+- HTTP 交互模型：异步 Run API + SSE
+- 服务边界：本机单用户，默认 127.0.0.1
+- MVP 不实现多渠道 Gateway、UI、plugin、subagent
 
 ## 风险
 
@@ -37,6 +40,7 @@
 - fallback 场景要避免重复写入失败轮次的末尾用户消息
 - 工作区文件体系要避免沦为“空模板”，必须对默认 prompt 真正生效
 - 通用代理定位不能被本地代码工具重新带偏为 coding-only
+- HTTP 层要避免重新发明第二套日志格式，必须复用现有 TraceRecord
 
 ## 结果
 
@@ -45,3 +49,5 @@
 - `npm test` 通过
 - `npm run build` 通过
 - 工作区文件体系已扩展为 `AGENTS/SOUL/USER/IDENTITY/TOOLS/BOOTSTRAP/MEMORY`
+- 已切换到 `feature/http-run-api` 开发分支
+- 已实现 `/health`、`/runs`、`/runs/:id`、`/runs/:id/events`、`/runs/:id/stream`、`/runs/:id/abort`

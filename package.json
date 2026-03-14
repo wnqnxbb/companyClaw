@@ -12,6 +12,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/cli.ts",
     "agent": "tsx src/cli.ts agent",
+    "serve": "tsx src/cli.ts serve",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"

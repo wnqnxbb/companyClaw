@@ -4,7 +4,7 @@
 
 它参考了 `openclaw` 的 workspace/runtime 思路，但保持独立实现。当前版本的重点是：
 
-- 本地 CLI 调用
+- 本机 HTTP 服务
 - 会话持久化
 - 工作区文件驱动的系统提示
 - 最小工具集：`read`、`write`、`edit`、`apply_patch`、`exec`
@@ -100,80 +100,106 @@ export SOHU_BPD_API_KEY=your_key_here
 2. 把 `USER.md` 和 `IDENTITY.md` 补完整
 3. 把你自己的模型端点、命令、目录习惯写进 `TOOLS.md`
 
-### 3. 运行代理
+### 3. 启动 HTTP 服务
 
-最简单的方式：
-
-```bash
-npm run agent -- --message "请先阅读工作区文件，然后总结你是谁、你能做什么"
-```
-
-或者直接运行构建后的 CLI：
+启动服务：
 
 ```bash
-node dist/src/cli.js agent --message "帮我总结这个目录的用途"
+npm run serve
 ```
 
-如果想看结构化结果：
+或者指定地址和端口：
 
 ```bash
-node dist/src/cli.js agent --message "只回复一句话介绍自己" --json
+node dist/src/cli.js serve --host 127.0.0.1 --port 18789
 ```
 
-### 4. 继续同一个会话
+成功后会输出：
 
-默认会话键是 `main`，所以你连续执行命令时会复用上下文：
+```json
+{
+  "ok": true,
+  "host": "127.0.0.1",
+  "port": 18789,
+  "baseUrl": "http://127.0.0.1:18789"
+}
+```
+
+### 4. 调用 `/runs`
+
+最小请求：
 
 ```bash
-node dist/src/cli.js agent --message "记住我偏好中文回复"
-node dist/src/cli.js agent --message "复述一下你刚记住的偏好"
+curl -s -X POST http://127.0.0.1:18789/runs \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "message": "请先阅读工作区文件，然后总结你是谁、你能做什么",
+    "sessionKey": "main"
+  }'
 ```
 
-你也可以显式指定会话键：
+返回示例：
+
+```json
+{
+  "runId": "43f24157-f721-4238-9c23-f84cde63a8d0",
+  "status": "queued",
+  "createdAt": "2026-03-14T06:11:27.071Z",
+  "request": {
+    "message": "请先阅读工作区文件，然后总结你是谁、你能做什么",
+    "sessionKey": "main"
+  },
+  "runUrl": "/runs/43f24157-f721-4238-9c23-f84cde63a8d0",
+  "eventsUrl": "/runs/43f24157-f721-4238-9c23-f84cde63a8d0/events",
+  "streamUrl": "/runs/43f24157-f721-4238-9c23-f84cde63a8d0/stream",
+  "abortUrl": "/runs/43f24157-f721-4238-9c23-f84cde63a8d0/abort"
+}
+```
+
+### 5. 查询运行状态
 
 ```bash
-node dist/src/cli.js agent --session-key planning --message "帮我做项目规划"
-node dist/src/cli.js agent --session-key planning --message "继续刚才的规划"
+curl -s http://127.0.0.1:18789/runs/<runId>
 ```
 
-如果你已经拿到某次返回里的 `sessionId`，也可以直接续接：
+### 6. 看事件流
+
+轮询事件：
 
 ```bash
-node dist/src/cli.js agent --session-id <session-id> --message "继续上次的话题"
+curl -s "http://127.0.0.1:18789/runs/<runId>/events?afterSeq=0"
 ```
 
-### 5. 看详细交互日志
-
-`companyClaw` 现在会默认把每次运行的完整结构化日志写到：
-
-```text
-.companyclaw/logs/runs/<runId>.jsonl
-```
-
-日志会包含：
-
-- `run.start`
-- `prompt.system`
-- `prompt.user`
-- `model.attempt`
-- `llm.request`
-- `tool.start`
-- `tool.end`
-- `assistant.delta`
-- `assistant.final`
-- `run.end`
-
-如果你想在终端实时看到这些日志，执行时加 `--trace`：
+SSE 实时流：
 
 ```bash
-node dist/src/cli.js agent --message "你好" --trace --json
+curl -N http://127.0.0.1:18789/runs/<runId>/stream
 ```
 
-说明：
+### 7. 中止运行
 
-- 详细 trace 会输出到 `stderr`
-- 最终结果或 `--json` 输出仍然走 `stdout`
-- 返回的 JSON 里会包含 `logFile`
+```bash
+curl -s -X POST http://127.0.0.1:18789/runs/<runId>/abort
+```
+
+### 8. 传本地路径给代理
+
+HTTP 首版支持 `message + paths[]`。
+
+例如让代理读取图片前先拿到图片路径：
+
+```bash
+curl -s -X POST http://127.0.0.1:18789/runs \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "message": "请描述这个图片的内容。必须先读取图片再回答。",
+    "sessionKey": "image-demo",
+    "workspaceDir": "/Users/zhaomingxuan",
+    "paths": ["/Users/zhaomingxuan/Pictures/work_image/huamianai.png"]
+  }'
+```
+
+服务会校验这些路径必须位于 `workspaceDir` 下，否则直接返回 `400`。
 
 ## 一个完整示例
 
@@ -181,14 +207,14 @@ node dist/src/cli.js agent --message "你好" --trace --json
 export SOHU_BPD_API_KEY=your_key_here
 
 npm run build
+npm run serve
 
-node dist/src/cli.js agent --message "先阅读 AGENTS.md、SOUL.md、USER.md、IDENTITY.md、TOOLS.md，然后用三句话介绍你自己" --json
-```
-
-如果你想同时看到实时 trace：
-
-```bash
-node dist/src/cli.js agent --message "先阅读工作区文件，然后介绍你自己" --trace --json
+curl -s -X POST http://127.0.0.1:18789/runs \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "message": "先阅读 AGENTS.md、SOUL.md、USER.md、IDENTITY.md、TOOLS.md，然后用三句话介绍你自己",
+    "sessionKey": "intro"
+  }'
 ```
 
 ## 配置说明
@@ -244,12 +270,22 @@ node dist/src/cli.js agent --message "先阅读工作区文件，然后介绍你
 - `includeAssistantDeltas`：是否记录流式输出增量
 - `includeLlmRequests`：是否记录每次发给模型的上下文
 
-## 常用命令
+## HTTP 接口
 
 ```bash
-npm run typecheck
-npm test
-npm run build
+GET  /health
+POST /runs
+GET  /runs/:id
+GET  /runs/:id/events?afterSeq=<n>
+GET  /runs/:id/stream
+POST /runs/:id/abort
+```
+
+## 调试命令
+
+虽然 HTTP 是正式入口，CLI `agent` 仍保留给本地调试和 smoke test：
+
+```bash
 npm run agent -- --message "你好"
 node dist/src/cli.js agent --message "只回复一句话" --json
 node dist/src/cli.js agent --message "你好" --trace --json
@@ -260,13 +296,12 @@ node dist/src/cli.js agent --message "你好" --trace --json
 当前版本还没有：
 
 - Web UI
-- Gateway / WebSocket
 - 多渠道接入
 - 浏览器工具
 - 子代理
 - cron / heartbeat
 
-它现在是一个本地 CLI 优先的最小 runtime。
+它现在是一个本机单用户的最小 HTTP runtime。
 
 ## 故障排查
 
@@ -278,10 +313,11 @@ node dist/src/cli.js agent --message "你好" --trace --json
 2. `companyclaw.config.json` 的 `baseUrl` 是否正确
 3. 模型 id 是否和服务端一致
 
-### 自定义端点能 curl 通，但 runtime 不通
+### 自定义端点能 curl 通，但 HTTP run 不通
 
 先确认：
 
+- HTTP 服务启动进程继承了正确的环境变量
 - `companyclaw.config.json` 已经指向正确模型
 - 已执行过 `npm run build`
 - 没有把旧的状态目录误当成新配置结果
@@ -294,13 +330,13 @@ rm -rf .companyclaw
 
 ### 我想看每次和模型的交互
 
-直接这样运行：
+看实时事件流：
 
 ```bash
-node dist/src/cli.js agent --message "你好" --trace --json
+curl -N http://127.0.0.1:18789/runs/<runId>/stream
 ```
 
-然后查看返回里的 `logFile`，或者手动打开：
+看结构化日志文件：
 
 ```bash
 ls .companyclaw/logs/runs

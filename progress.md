@@ -12,3 +12,14 @@
 - 已完成：把 workspace 文件体系从 coding-only 调整为通用代理设计，并纳入默认 prompt。
 - 已完成：新增 `AGENTS.md`、`SOUL.md`、`USER.md`、`IDENTITY.md`、`TOOLS.md`、`BOOTSTRAP.md`、`MEMORY.md`。
 - 已完成：新增 prompt 相关测试并通过 `typecheck/test/build`。
+
+## 2026-03-14
+
+- 已完成：在 `companyClaw` 目录初始化独立 git 仓库。
+- 已完成：提交 `main` 基线并推送到 GitHub。
+- 已完成：切出 `feature/http-run-api` 分支。
+- 已完成：把 `runAgent` 扩展为可传 `runId`、`abortSignal`、`onRecord`。
+- 已完成：新增 `RunManager` 与原生 Node HTTP 服务。
+- 已完成：新增 `/health`、`/runs`、`/runs/:id`、`/runs/:id/events`、`/runs/:id/stream`、`/runs/:id/abort`。
+- 已完成：新增 HTTP server 测试并通过 `typecheck/test/build`。
+- 已完成：本地 smoke 验证 `/health` 和 `POST /runs` 可用。
