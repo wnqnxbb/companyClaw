@@ -10,6 +10,7 @@ import type { HttpRunRequest } from "./types.js";
 type ServerOptions = {
   host?: string;
   port?: number;
+  trace?: boolean;
   config?: RuntimeConfig;
   runAgentImpl?: typeof runAgent;
 };
@@ -96,7 +97,9 @@ export async function startHttpServer(options?: ServerOptions): Promise<{
     }));
   const host = options?.host ?? "127.0.0.1";
   const desiredPort = options?.port ?? 18789;
-  const runManager = new RunManager(options?.runAgentImpl ?? runAgent);
+  const runManager = new RunManager(options?.runAgentImpl ?? runAgent, {
+    traceEnabled: options?.trace === true,
+  });
 
   const server = http.createServer(async (req, res) => {
     const method = req.method ?? "GET";

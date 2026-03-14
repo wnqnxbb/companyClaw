@@ -105,8 +105,10 @@ export async function runAgent(
   const runId = options?.runId?.trim() || crypto.randomUUID();
   const logger = await createRunLogger({
     config,
+    sessionId: resolvedSession.sessionId,
     runId,
-    consoleEnabled: options?.trace === true || config.runtime.observability.console === true,
+    traceEnabled: options?.traceEnabled === true,
+    consoleEnabled: options?.traceConsole === true || config.runtime.observability.console === true,
     onRecord: options?.onRecord,
   });
   await logger?.log("run.start", {

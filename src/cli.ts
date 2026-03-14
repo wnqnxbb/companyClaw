@@ -12,12 +12,14 @@ async function main(): Promise<void> {
     .command("serve")
     .option("--host <host>", "HTTP bind host", "127.0.0.1")
     .option("--port <port>", "HTTP bind port", "18789")
+    .option("--trace", "Enable per-run trace files under the session directory", false)
     .action(async (options: Record<string, unknown>) => {
       const host = typeof options.host === "string" ? options.host : "127.0.0.1";
       const port = Number.parseInt(String(options.port ?? "18789"), 10);
       const started = await startHttpServer({
         host,
         port: Number.isFinite(port) ? port : 18789,
+        trace: options.trace === true,
       });
       process.stdout.write(`${JSON.stringify({
         ok: true,
@@ -34,7 +36,7 @@ async function main(): Promise<void> {
     .option("--session-id <id>", "Explicit session id")
     .option("--workspace-dir <path>", "Workspace directory override")
     .option("--config <path>", "Config file path")
-    .option("--trace", "Print detailed runtime trace to stderr", false)
+    .option("--trace", "Print trace to stderr and persist per-run trace under the session directory", false)
     .option("--json", "Print JSON result", false)
     .action(async (options: Record<string, unknown>) => {
       const result = await runAgent({
@@ -45,7 +47,8 @@ async function main(): Promise<void> {
           typeof options.workspaceDir === "string" ? options.workspaceDir : undefined,
         configPath: typeof options.config === "string" ? options.config : undefined,
       }, {
-        trace: options.trace === true,
+        traceEnabled: options.trace === true,
+        traceConsole: options.trace === true,
       });
 
       if (options.json === true) {

@@ -24,6 +24,9 @@ describe("resolveSession", () => {
     expect(first.sessionKey).toBe("main");
     expect(second.sessionId).toBe(first.sessionId);
     expect(second.sessionFile).toBe(first.sessionFile);
+    expect(first.sessionFile).toBe(
+      path.join(config.sessionsDir, first.sessionId, "transcript.jsonl"),
+    );
   });
 
   it("prefers an existing session when resolving by session id", async () => {
@@ -36,5 +39,6 @@ describe("resolveSession", () => {
 
     expect(byId.sessionKey).toBe("feature");
     expect(byId.sessionId).toBe(created.sessionId);
+    expect(byId.sessionFile).toBe(path.join(config.sessionsDir, created.sessionId, "transcript.jsonl"));
   });
 });

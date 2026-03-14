@@ -35,7 +35,8 @@
 ```text
 .companyclaw/
   sessions.json
-  transcripts/*.jsonl
+  sessions/<sessionId>/transcript.jsonl
+  sessions/<sessionId>/runs/<runId>.jsonl  # 仅在 --trace 时生成
   agent/models.json
   agent/auth.json
 ```
@@ -112,6 +113,12 @@ npm run serve
 
 ```bash
 node dist/src/cli.js serve --host 127.0.0.1 --port 18789
+```
+
+如果你想把每次 run 的详细 trace 落盘到 session 目录：
+
+```bash
+node dist/src/cli.js serve --host 127.0.0.1 --port 18789 --trace
 ```
 
 成功后会输出：
@@ -226,7 +233,6 @@ curl -s -X POST http://127.0.0.1:18789/runs \
   "runtime": {
     "observability": {
       "enabled": true,
-      "logDir": "logs",
       "console": false,
       "includePrompts": true,
       "includeToolArgs": true,
@@ -261,8 +267,7 @@ curl -s -X POST http://127.0.0.1:18789/runs \
 
 日志相关字段：
 
-- `enabled`：是否开启日志
-- `logDir`：日志目录，默认写到 `.companyclaw/logs`
+- `enabled`：是否允许生成 trace；真正落盘还需要在启动时显式传 `--trace`
 - `console`：是否默认把详细 trace 打到终端
 - `includePrompts`：是否记录完整 prompt
 - `includeToolArgs`：是否记录工具参数
@@ -339,8 +344,8 @@ curl -N http://127.0.0.1:18789/runs/<runId>/stream
 看结构化日志文件：
 
 ```bash
-ls .companyclaw/logs/runs
-tail -n 50 .companyclaw/logs/runs/<runId>.jsonl
+ls .companyclaw/sessions
+tail -n 50 .companyclaw/sessions/<sessionId>/runs/<runId>.jsonl
 ```
 
 ## 文件职责

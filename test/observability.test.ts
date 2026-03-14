@@ -185,7 +185,6 @@ async function createConfig(): Promise<RuntimeConfig> {
         observability: {
           enabled: true,
           console: false,
-          logDir: "logs",
           includePrompts: true,
           includeToolArgs: true,
           includeToolResults: true,
@@ -211,7 +210,28 @@ async function createConfig(): Promise<RuntimeConfig> {
 }
 
 describe("observability logging", () => {
-  it("writes prompt, llm request, tool events and assistant output to a JSONL trace", async () => {
+  it("does not write a run log when trace is disabled", async () => {
+    const config = await createConfig();
+    const eventTypes: string[] = [];
+    const result = await runAgent(
+      {
+        message: "你好",
+      },
+      {
+        config,
+        sdk: createFakeSdk(),
+        onRecord(record) {
+          eventTypes.push(record.type);
+        },
+      },
+    );
+
+    expect(result.logFile).toBeUndefined();
+    expect(eventTypes).toContain("run.start");
+    expect(eventTypes).toContain("assistant.final");
+  });
+
+  it("writes prompt, llm request, tool events and assistant output to a JSONL trace when enabled", async () => {
     const config = await createConfig();
     const result = await runAgent(
       {
@@ -220,11 +240,13 @@ describe("observability logging", () => {
       {
         config,
         sdk: createFakeSdk(),
+        traceEnabled: true,
       },
     );
 
     expect(result.logFile).toBeTruthy();
     const logFile = result.logFile as string;
+    expect(logFile).toContain(`${path.sep}.companyclaw${path.sep}sessions${path.sep}`);
     const content = await fs.readFile(logFile, "utf8");
     const rows = content
       .trim()

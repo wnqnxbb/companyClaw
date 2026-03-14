@@ -21,6 +21,7 @@
 | 3. 工具与 runtime | complete | 已实现工具注册、pi adapter、runAgent 主链路 |
 | 4. CLI 与测试 | complete | 已实现命令行入口、单元测试 |
 | 5. 安装依赖与验证 | complete | 已完成安装依赖并通过 typecheck/test |
+| 6. session 目录化与 trace 开关 | complete | 已改为 `.companyclaw/sessions/<sessionId>/...`，并把 trace 调整为显式开启 |
 
 ## 决策
 
@@ -32,6 +33,10 @@
 - HTTP 交互模型：异步 Run API + SSE
 - 服务边界：本机单用户，默认 127.0.0.1
 - MVP 不实现多渠道 Gateway、UI、plugin、subagent
+- 新目录方案：`.companyclaw/sessions/<sessionId>/transcript.jsonl`
+- 新 trace 方案：`.companyclaw/sessions/<sessionId>/runs/<runId>.jsonl`
+- trace 改为显式开启，默认不落盘 run log
+- `serve --trace` 开启 HTTP run 文件落盘，`agent --trace` 同时开启文件 trace 与终端 trace
 
 ## 风险
 
@@ -41,6 +46,15 @@
 - 工作区文件体系要避免沦为“空模板”，必须对默认 prompt 真正生效
 - 通用代理定位不能被本地代码工具重新带偏为 coding-only
 - HTTP 层要避免重新发明第二套日志格式，必须复用现有 TraceRecord
+- 旧 `sessions.json` 中的 `sessionFile` 可能仍指向历史 `transcripts/*.jsonl`
+- 目录迁移后，README 和测试里的旧路径断言都需要一起更新
+- HTTP `/runs/:id/events` 依赖 trace record 回调，不能因为关闭文件落盘而一并关掉事件流
+
+## 本轮验证
+
+- `npm run typecheck` 通过
+- `npm test` 通过
+- `npm run build` 通过
 
 ## 结果
 

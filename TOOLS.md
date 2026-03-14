@@ -22,7 +22,8 @@
 ## 当前状态目录
 
 - `.companyclaw/sessions.json`
-- `.companyclaw/transcripts/*.jsonl`
+- `.companyclaw/sessions/<sessionId>/transcript.jsonl`
+- `.companyclaw/sessions/<sessionId>/runs/<runId>.jsonl`（仅在 `--trace` 时生成）
 - `.companyclaw/agent/models.json`
 - `.companyclaw/agent/auth.json`
 

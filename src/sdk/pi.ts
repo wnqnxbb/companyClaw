@@ -219,7 +219,7 @@ export function extractAssistantText(messages: Array<unknown>): string {
 export const defaultRuntimeSdk: RuntimeSdk = {
   async ensureRuntimeState(config) {
     await ensureDir(config.stateDir);
-    await ensureDir(config.transcriptsDir);
+    await ensureDir(config.sessionsDir);
     await ensureDir(config.agentDir);
     await ensureModelsJson(config);
     const authPath = path.join(config.agentDir, "auth.json");

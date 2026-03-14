@@ -23,3 +23,10 @@
 - 已完成：新增 `/health`、`/runs`、`/runs/:id`、`/runs/:id/events`、`/runs/:id/stream`、`/runs/:id/abort`。
 - 已完成：新增 HTTP server 测试并通过 `typecheck/test/build`。
 - 已完成：本地 smoke 验证 `/health` 和 `POST /runs` 可用。
+- 进行中：按用户确认方案改造 session 目录结构，把 transcript 与 run log 统一收拢到 `.companyclaw/sessions/<sessionId>/`。
+- 进行中：把 run trace 改为显式开启，默认不生成 run log 文件。
+- 已完成：新增 `src/session/paths.ts`，把 transcript 与 run log 路径统一到 session 目录。
+- 已完成：`serve --trace` 改为服务级 run log 开关；`agent --trace` 同时开启 run log 与终端 trace。
+- 已完成：保留 HTTP `/runs/:id/events` 和 `/runs/:id/stream` 的事件流，不再依赖文件落盘是否开启。
+- 已完成：同步更新 README、TOOLS.md、配置样例与相关测试。
+- 已完成：验证 `npm run typecheck`、`npm test`、`npm run build` 全部通过。

@@ -1,18 +1,19 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { getSessionRunLogFile } from "./session/paths.js";
 import type { RuntimeConfig, RuntimeSession, TraceRecord } from "./types.js";
 
 type LogPayload = Record<string, unknown>;
 
 export class RunLogger {
-  readonly filePath: string;
+  readonly filePath?: string;
   private readonly consoleEnabled: boolean;
   private readonly onRecord?: (record: TraceRecord) => void | Promise<void>;
   private seq = 0;
   private writeChain: Promise<void> = Promise.resolve();
 
   constructor(
-    filePath: string,
+    filePath: string | undefined,
     consoleEnabled: boolean,
     onRecord?: (record: TraceRecord) => void | Promise<void>,
   ) {
@@ -22,7 +23,9 @@ export class RunLogger {
   }
 
   async init(): Promise<void> {
-    await fs.mkdir(path.dirname(this.filePath), { recursive: true });
+    if (this.filePath) {
+      await fs.mkdir(path.dirname(this.filePath), { recursive: true });
+    }
   }
 
   log(type: string, payload: LogPayload): Promise<void> {
@@ -35,7 +38,9 @@ export class RunLogger {
     };
     const line = `${JSON.stringify(record)}\n`;
     this.writeChain = this.writeChain.then(async () => {
-      await fs.appendFile(this.filePath, line, "utf8");
+      if (this.filePath) {
+        await fs.appendFile(this.filePath, line, "utf8");
+      }
       if (this.consoleEnabled) {
         renderTraceToConsole(record);
       }
@@ -79,15 +84,21 @@ function renderTraceToConsole(record: TraceRecord): void {
 
 export async function createRunLogger(params: {
   config: RuntimeConfig;
+  sessionId: string;
   runId: string;
+  traceEnabled: boolean;
   consoleEnabled: boolean;
   onRecord?: (record: TraceRecord) => void | Promise<void>;
 }): Promise<RunLogger | null> {
   if (!params.config.runtime.observability.enabled) {
     return null;
   }
-  const logDir = path.resolve(params.config.stateDir, params.config.runtime.observability.logDir);
-  const filePath = path.join(logDir, "runs", `${params.runId}.jsonl`);
+  if (!params.traceEnabled && !params.consoleEnabled && !params.onRecord) {
+    return null;
+  }
+  const filePath = params.traceEnabled
+    ? getSessionRunLogFile(params.config, params.sessionId, params.runId)
+    : undefined;
   const logger = new RunLogger(filePath, params.consoleEnabled, params.onRecord);
   await logger.init();
   return logger;

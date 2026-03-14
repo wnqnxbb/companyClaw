@@ -17,7 +17,7 @@ export type RuntimeConfig = {
   workspaceDir: string;
   stateDir: string;
   agentDir: string;
-  transcriptsDir: string;
+  sessionsDir: string;
   sessionStorePath: string;
   bootstrapFiles: string[];
   runtime: {
@@ -26,7 +26,6 @@ export type RuntimeConfig = {
     execTimeoutMs: number;
     observability: {
       enabled: boolean;
-      logDir: string;
       console: boolean;
       includePrompts: boolean;
       includeToolArgs: boolean;
@@ -96,7 +95,8 @@ export type RunAgentOptions = {
   onEvent?: (event: AgentRunEvent) => void;
   onRecord?: (record: TraceRecord) => void | Promise<void>;
   sdk?: RuntimeSdk;
-  trace?: boolean;
+  traceEnabled?: boolean;
+  traceConsole?: boolean;
   runId?: string;
   abortSignal?: AbortSignal;
 };

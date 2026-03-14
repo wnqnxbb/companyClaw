@@ -41,6 +41,7 @@ describe("loadConfig", () => {
 
     expect(config.workspaceDir).toBe(path.join(tempDir, "workspace"));
     expect(config.stateDir).toBe(path.join(tempDir, "workspace", ".companyclaw"));
+    expect(config.sessionsDir).toBe(path.join(tempDir, "workspace", ".companyclaw", "sessions"));
     expect(config.sessionStorePath).toBe(
       path.join(tempDir, "workspace", ".companyclaw", "sessions.json"),
     );

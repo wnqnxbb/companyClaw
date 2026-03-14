@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
+import path from "node:path";
 import { ensureDir, readJsonFile, writeJsonFile } from "../fs-utils.js";
+import { getSessionTranscriptFile } from "./paths.js";
 import type { ResolvedSession, RuntimeConfig, SessionEntry, SessionStore } from "../types.js";
 
 export async function loadSessionStore(config: RuntimeConfig): Promise<SessionStore> {
@@ -31,7 +33,8 @@ export async function resolveSession(params: {
     : requestedKey;
   const existing = store[resolvedKey];
   const sessionId = requestedSessionId || existing?.sessionId || crypto.randomUUID();
-  const sessionFile = existing?.sessionFile || `${params.config.transcriptsDir}/${sessionId}.jsonl`;
+  const sessionFile = existing?.sessionFile || getSessionTranscriptFile(params.config, sessionId);
+  await ensureDir(path.dirname(sessionFile));
   const entry: SessionEntry = {
     sessionId,
     updatedAt: Date.now(),

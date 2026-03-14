@@ -38,7 +38,6 @@ const configSchema = z.object({
       observability: z
         .object({
           enabled: z.boolean().default(true),
-          logDir: z.string().trim().min(1).default("logs"),
           console: z.boolean().default(false),
           includePrompts: z.boolean().default(true),
           includeToolArgs: z.boolean().default(true),
@@ -48,7 +47,6 @@ const configSchema = z.object({
         })
         .default({
           enabled: true,
-          logDir: "logs",
           console: false,
           includePrompts: true,
           includeToolArgs: true,
@@ -63,7 +61,6 @@ const configSchema = z.object({
       execTimeoutMs: 2 * 60 * 1000,
       observability: {
         enabled: true,
-        logDir: "logs",
         console: false,
         includePrompts: true,
         includeToolArgs: true,
@@ -132,14 +129,14 @@ export async function loadConfig(options?: {
     parsed.stateDir ?? process.env.COMPANYCLAW_STATE_DIR ?? ".companyclaw",
   );
   const agentDir = path.join(stateDir, "agent");
-  const transcriptsDir = path.join(stateDir, "transcripts");
+  const sessionsDir = path.join(stateDir, "sessions");
   const sessionStorePath = path.join(stateDir, "sessions.json");
 
   return {
     workspaceDir,
     stateDir,
     agentDir,
-    transcriptsDir,
+    sessionsDir,
     sessionStorePath,
     bootstrapFiles: parsed.bootstrapFiles,
     runtime: parsed.runtime,

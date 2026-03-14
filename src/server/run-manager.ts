@@ -9,9 +9,11 @@ type RunAgentFn = (
 export class RunManager {
   private readonly runs = new Map<string, RunRecord>();
   private readonly runAgent: RunAgentFn;
+  private readonly traceEnabled: boolean;
 
-  constructor(runAgent: RunAgentFn) {
+  constructor(runAgent: RunAgentFn, options?: { traceEnabled?: boolean }) {
     this.runAgent = runAgent;
+    this.traceEnabled = options?.traceEnabled === true;
   }
 
   async createRun(request: HttpRunRequest): Promise<RunSummary> {
@@ -83,7 +85,8 @@ export class RunManager {
     try {
       const result = await this.runAgent(record.request, {
         runId: record.runId,
-        trace: record.request.traceConsole === true,
+        traceEnabled: this.traceEnabled,
+        traceConsole: record.request.traceConsole === true,
         abortSignal: record.abortController.signal,
         onRecord: async (traceRecord) => {
           this.appendRecord(record.runId, traceRecord);
