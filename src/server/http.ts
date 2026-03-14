@@ -1,5 +1,6 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import { URL } from "node:url";
+import { createAgentWorkspace, requireAgentRuntimeConfig } from "../agent-workspace.js";
 import { loadConfig } from "../config.js";
 import { resolveWithinRoot } from "../fs-utils.js";
 import { runAgent } from "../runtime.js";
@@ -15,6 +16,12 @@ type ServerOptions = {
   runAgentImpl?: typeof runAgent;
 };
 
+function createStatusError(statusCode: number, message: string): Error & { statusCode: number } {
+  const error = new Error(message) as Error & { statusCode: number };
+  error.statusCode = statusCode;
+  return error;
+}
+
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
   res.statusCode = statusCode;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -22,12 +29,16 @@ function sendJson(res: ServerResponse, statusCode: number, payload: unknown): vo
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  try {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const raw = Buffer.concat(chunks).toString("utf8").trim();
+    return raw ? (JSON.parse(raw) as unknown) : {};
+  } catch {
+    throw createStatusError(400, "Request body must be valid JSON.");
   }
-  const raw = Buffer.concat(chunks).toString("utf8").trim();
-  return raw ? (JSON.parse(raw) as unknown) : {};
 }
 
 function parseRunPath(pathname: string): { runId: string; action?: string } | null {
@@ -41,37 +52,50 @@ function parseRunPath(pathname: string): { runId: string; action?: string } | nu
   };
 }
 
-function normalizeRunRequest(raw: unknown, config: RuntimeConfig): HttpRunRequest {
+function normalizeCreateAgentRequest(raw: unknown): { name: string; agentId: string } {
   if (!raw || typeof raw !== "object") {
-    throw new Error("Request body must be an object.");
+    throw createStatusError(400, "Request body must be an object.");
   }
   const body = raw as Record<string, unknown>;
-  if (typeof body.message !== "string" || body.message.trim() === "") {
-    throw new Error("`message` is required.");
+  if (typeof body.name !== "string" || body.name.trim() === "") {
+    throw createStatusError(400, "`name` is required.");
   }
+  if (typeof body.agentId !== "string" || body.agentId.trim() === "") {
+    throw createStatusError(400, "`agentId` is required.");
+  }
+  return {
+    name: body.name.trim(),
+    agentId: body.agentId.trim(),
+  };
+}
 
-  const workspaceDir =
-    typeof body.workspaceDir === "string" && body.workspaceDir.trim()
-      ? body.workspaceDir.trim()
-      : undefined;
-  const effectiveWorkspace = workspaceDir ?? config.workspaceDir;
+function normalizeRunRequest(raw: unknown): HttpRunRequest {
+  if (!raw || typeof raw !== "object") {
+    throw createStatusError(400, "Request body must be an object.");
+  }
+  const body = raw as Record<string, unknown>;
+  if (typeof body.agentId !== "string" || body.agentId.trim() === "") {
+    throw createStatusError(400, "`agentId` is required.");
+  }
+  if (typeof body.message !== "string" || body.message.trim() === "") {
+    throw createStatusError(400, "`message` is required.");
+  }
 
   const rawPaths = Array.isArray(body.paths) ? body.paths : undefined;
   const paths =
     rawPaths?.map((value) => {
       if (typeof value !== "string" || value.trim() === "") {
-        throw new Error("`paths` must be an array of non-empty strings.");
+        throw createStatusError(400, "`paths` must be an array of non-empty strings.");
       }
-      return resolveWithinRoot(effectiveWorkspace, value.trim());
+      return value.trim();
     }) ?? undefined;
 
   return {
+    agentId: body.agentId.trim(),
     message: body.message.trim(),
     paths,
     sessionKey: typeof body.sessionKey === "string" ? body.sessionKey.trim() : undefined,
     sessionId: typeof body.sessionId === "string" ? body.sessionId.trim() : undefined,
-    workspaceDir,
-    configPath: typeof body.configPath === "string" ? body.configPath.trim() : undefined,
     extraSystemPrompt:
       typeof body.extraSystemPrompt === "string" ? body.extraSystemPrompt : undefined,
     traceConsole: body.traceConsole === true,
@@ -118,8 +142,26 @@ export async function startHttpServer(options?: ServerOptions): Promise<{
 
       if (method === "POST" && requestUrl.pathname === "/runs") {
         const body = await readJsonBody(req);
-        const runRequest = normalizeRunRequest(body, config);
-        const created = await runManager.createRun(runRequest);
+        const runRequest = normalizeRunRequest(body);
+        const agentConfig = await requireAgentRuntimeConfig(config, runRequest.agentId);
+        let resolvedPaths: string[] | undefined;
+        try {
+          resolvedPaths = runRequest.paths?.map((filePath) =>
+            resolveWithinRoot(agentConfig.workspaceDir, filePath),
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          throw createStatusError(400, message);
+        }
+        const created = await runManager.createRun(
+          {
+            ...runRequest,
+            paths: resolvedPaths,
+          },
+          {
+            config: agentConfig,
+          },
+        );
         sendJson(res, 202, {
           ...created,
           runUrl: `/runs/${created.runId}`,
@@ -127,6 +169,14 @@ export async function startHttpServer(options?: ServerOptions): Promise<{
           streamUrl: `/runs/${created.runId}/stream`,
           abortUrl: `/runs/${created.runId}/abort`,
         });
+        return;
+      }
+
+      if (method === "POST" && requestUrl.pathname === "/agents") {
+        const body = await readJsonBody(req);
+        const createRequest = normalizeCreateAgentRequest(body);
+        const created = await createAgentWorkspace(config, createRequest);
+        sendJson(res, 201, created);
         return;
       }
 
@@ -204,7 +254,11 @@ export async function startHttpServer(options?: ServerOptions): Promise<{
       sendJson(res, 404, { error: "Not found." });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      sendJson(res, 400, { error: message });
+      const statusCode =
+        typeof error === "object" && error !== null && "statusCode" in error
+          ? Number((error as { statusCode?: unknown }).statusCode) || 500
+          : 500;
+      sendJson(res, statusCode, { error: message });
     }
   });
 

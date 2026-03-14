@@ -22,6 +22,7 @@
 | 4. CLI 与测试 | complete | 已实现命令行入口、单元测试 |
 | 5. 安装依赖与验证 | complete | 已完成安装依赖并通过 typecheck/test |
 | 6. session 目录化与 trace 开关 | complete | 已改为 `.companyclaw/sessions/<sessionId>/...`，并把 trace 调整为显式开启 |
+| 7. 多 agent workspace 与创建接口 | complete | 已新增 `POST /agents`、`agentId` 驱动的 `/runs`、模板目录与多 agent 路径解析 |
 
 ## 决策
 
@@ -37,6 +38,12 @@
 - 新 trace 方案：`.companyclaw/sessions/<sessionId>/runs/<runId>.jsonl`
 - trace 改为显式开启，默认不落盘 run log
 - `serve --trace` 开启 HTTP run 文件落盘，`agent --trace` 同时开启文件 trace 与终端 trace
+- 多 agent 根目录：固定为 `~/.companyclaw`
+- 多 agent 模型 seed：根 `~/.companyclaw/agent/`
+- HTTP 创建接口：`POST /agents`
+- HTTP 运行接口：`POST /runs` 必须携带 `agentId`
+- workspace 模板目录：`templates/agent-workspace/`
+- 默认 bootstrap 文件新增 `HEARTBEAT.md`
 
 ## 风险
 
@@ -49,12 +56,15 @@
 - 旧 `sessions.json` 中的 `sessionFile` 可能仍指向历史 `transcripts/*.jsonl`
 - 目录迁移后，README 和测试里的旧路径断言都需要一起更新
 - HTTP `/runs/:id/events` 依赖 trace record 回调，不能因为关闭文件落盘而一并关掉事件流
+- 根目录 `AGENTS.md` 仍承担仓库级代理说明，不能直接删除，否则后续会话会丢失仓库指令
+- `POST /runs` 的路径校验现在基于 agent `workspace/`，旧客户端如果继续传 `workspaceDir` 会失败
 
 ## 本轮验证
 
 - `npm run typecheck` 通过
 - `npm test` 通过
 - `npm run build` 通过
+- `npx vitest run test/agent-workspace.test.ts test/prompt.test.ts test/http-server.test.ts` 通过
 
 ## 结果
 
@@ -65,3 +75,6 @@
 - 工作区文件体系已扩展为 `AGENTS/SOUL/USER/IDENTITY/TOOLS/BOOTSTRAP/MEMORY`
 - 已切换到 `feature/http-run-api` 开发分支
 - 已实现 `/health`、`/runs`、`/runs/:id`、`/runs/:id/events`、`/runs/:id/stream`、`/runs/:id/abort`
+- 已完成 `POST /agents`，会在 `~/.companyclaw/<agentId>/` 下生成独立运行态与 `workspace/`
+- 已完成 `/runs` 的 `agentId` 强制化，并把路径校验切到 agent `workspace/`
+- 已完成 `templates/agent-workspace/` 模板目录与 `HEARTBEAT.md`

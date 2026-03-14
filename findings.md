@@ -57,3 +57,11 @@
 - 当前 HTTP 请求只有 `traceConsole`，还没有“是否写 run log”的显式开关；要新增启动参数或 runtime 级别开关。
 - `RunManager` 的 `/events` 与 `/stream` 依赖 `onRecord` 回调；如果把 logger 直接关掉，会导致 HTTP 事件流也丢失。
 - 因此需要把“生成 TraceRecord”和“写 JSONL 文件”拆开：不落盘时仍然继续向内存事件流推送记录。
+
+## 2026-03-14 多 agent workspace 改造补充发现
+
+- 当前 `loadConfig()` 适合作为“服务级配置”来源，但不适合直接承担 agent 实例路径解析；新增 `resolveAgentRuntimeConfig()` 更稳。
+- 仓库根目录的 `AGENTS.md` 不能直接搬走，否则后续会话不会再自动读取这个仓库级说明；实现上采用“保留根文件 + 新增模板目录”的策略。
+- `companyclaw.config.json` 显式写死了 `bootstrapFiles`，如果不把 `HEARTBEAT.md` 加进去，运行时即使有模板文件也不会加载。
+- `resolveWithinRoot()` 抛的是普通错误；HTTP 层需要显式把路径越界映射成 `400`，否则会误报成 `500`。
+- 只给 `RunManager` 传 `request` 不够，多 agent 模式下必须把“本次 run 对应的运行时 config”一起带进去，否则 `runAgent()` 无法切到正确 agent 目录。

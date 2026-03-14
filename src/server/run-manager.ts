@@ -1,4 +1,4 @@
-import type { RunAgentOptions, TraceRecord } from "../types.js";
+import type { RuntimeConfig, RunAgentOptions, TraceRecord } from "../types.js";
 import type { HttpRunRequest, HttpRunStatus, RunRecord, RunSummary } from "./types.js";
 
 type RunAgentFn = (
@@ -16,13 +16,17 @@ export class RunManager {
     this.traceEnabled = options?.traceEnabled === true;
   }
 
-  async createRun(request: HttpRunRequest): Promise<RunSummary> {
+  async createRun(
+    request: HttpRunRequest,
+    options?: { config?: RuntimeConfig },
+  ): Promise<RunSummary> {
     const runId = crypto.randomUUID();
     const record: RunRecord = {
       runId,
       status: "queued",
       createdAt: new Date().toISOString(),
       request,
+      config: options?.config,
       events: [],
       abortController: new AbortController(),
       subscribers: new Set(),
@@ -84,6 +88,7 @@ export class RunManager {
     record.startedAt = new Date().toISOString();
     try {
       const result = await this.runAgent(record.request, {
+        config: record.config,
         runId: record.runId,
         traceEnabled: this.traceEnabled,
         traceConsole: record.request.traceConsole === true,

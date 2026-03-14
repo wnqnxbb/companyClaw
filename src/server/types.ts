@@ -1,9 +1,11 @@
 import type { AgentRunInput, AgentRunResult, TraceRecord } from "../types.js";
+import type { RuntimeConfig } from "../types.js";
 
 export type HttpRunRequest = Pick<
   AgentRunInput,
-  "message" | "paths" | "sessionKey" | "sessionId" | "workspaceDir" | "configPath" | "extraSystemPrompt"
+  "message" | "paths" | "sessionKey" | "sessionId" | "extraSystemPrompt"
 > & {
+  agentId: string;
   traceConsole?: boolean;
 };
 
@@ -27,6 +29,7 @@ export type RunSummary = {
 };
 
 export type RunRecord = RunSummary & {
+  config?: RuntimeConfig;
   events: TraceRecord[];
   abortController: AbortController;
   subscribers: Set<(record: TraceRecord) => void>;

@@ -21,11 +21,14 @@
 
 ## 当前状态目录
 
-- `.companyclaw/sessions.json`
-- `.companyclaw/sessions/<sessionId>/transcript.jsonl`
-- `.companyclaw/sessions/<sessionId>/runs/<runId>.jsonl`（仅在 `--trace` 时生成）
-- `.companyclaw/agent/models.json`
-- `.companyclaw/agent/auth.json`
+- `~/.companyclaw/agent/models.json`
+- `~/.companyclaw/agent/auth.json`
+- `~/.companyclaw/<agentId>/meta.json`
+- `~/.companyclaw/<agentId>/sessions.json`
+- `~/.companyclaw/<agentId>/sessions/<sessionId>/transcript.jsonl`
+- `~/.companyclaw/<agentId>/sessions/<sessionId>/runs/<runId>.jsonl`（仅在 `--trace` 时生成）
+- `~/.companyclaw/<agentId>/workspace/AGENTS.md`
+- `~/.companyclaw/<agentId>/workspace/HEARTBEAT.md`
 
 ## 常用命令
 
@@ -33,4 +36,5 @@
 - 类型检查：`npm run typecheck`
 - 测试：`npm test`
 - 构建：`npm run build`
-- 运行 agent：`node dist/src/cli.js agent --message "..." --json`
+- 启动服务：`npm run serve`
+- 创建 agent：`curl -s -X POST http://127.0.0.1:18789/agents -H 'Content-Type: application/json' -d '{"name":"研究 Agent","agentId":"claw_agent_deep_research"}'`

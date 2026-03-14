@@ -30,3 +30,8 @@
 - 已完成：保留 HTTP `/runs/:id/events` 和 `/runs/:id/stream` 的事件流，不再依赖文件落盘是否开启。
 - 已完成：同步更新 README、TOOLS.md、配置样例与相关测试。
 - 已完成：验证 `npm run typecheck`、`npm test`、`npm run build` 全部通过。
+- 已完成：新增 `src/agent-workspace.ts`，统一处理 `agentId` 校验、agent 目录解析和 `POST /agents` 创建逻辑。
+- 已完成：新增 `templates/agent-workspace/`，把 workspace 模板和 `HEARTBEAT.md` 固化到仓库内。
+- 已完成：`POST /runs` 改为必须传 `agentId`，并按 agent `workspace/` 做路径校验。
+- 已完成：新增 `test/agent-workspace.test.ts`，并扩展 HTTP / prompt 测试覆盖多 agent 行为。
+- 已完成：再次验证 `npm run typecheck`、`npm test`、`npm run build` 全部通过。

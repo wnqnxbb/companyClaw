@@ -7,7 +7,7 @@ import {
   SessionManager,
   SettingsManager,
 } from "@mariozechner/pi-coding-agent";
-import { ensureDir, writeJsonFile } from "../fs-utils.js";
+import { ensureDir, fileExists, writeJsonFile } from "../fs-utils.js";
 import { resolveModelApiKey } from "../config.js";
 import type {
   ModelDefinition,
@@ -41,7 +41,7 @@ function buildCredentials(models: ModelDefinition[]): CredentialMap {
   return credentials;
 }
 
-function buildModelsPayload(config: RuntimeConfig) {
+function buildModelsPayload(config: Pick<RuntimeConfig, "primaryModel" | "fallbackModels">) {
   const allModels = [config.primaryModel, ...config.fallbackModels];
   const providers: Record<
     string,
@@ -133,10 +133,20 @@ function createRuntimeAuthStorage(credentials: CredentialMap, agentDir: string):
   return storage;
 }
 
-async function ensureModelsJson(config: RuntimeConfig): Promise<void> {
-  await ensureDir(config.agentDir);
-  const modelsPath = path.join(config.agentDir, "models.json");
-  await writeJsonFile(modelsPath, buildModelsPayload(config));
+export async function ensureAgentSeedFiles(
+  agentDir: string,
+  config: Pick<RuntimeConfig, "primaryModel" | "fallbackModels">,
+  options?: { overwriteModels?: boolean },
+): Promise<void> {
+  await ensureDir(agentDir);
+  const modelsPath = path.join(agentDir, "models.json");
+  if (options?.overwriteModels !== false || !(await fileExists(modelsPath))) {
+    await writeJsonFile(modelsPath, buildModelsPayload(config));
+  }
+  const authPath = path.join(agentDir, "auth.json");
+  if (!(await fileExists(authPath))) {
+    await fs.writeFile(authPath, "{}\n", "utf8");
+  }
 }
 
 function createSettingsManagerCompat(workspaceDir: string, agentDir: string): unknown {
@@ -220,14 +230,7 @@ export const defaultRuntimeSdk: RuntimeSdk = {
   async ensureRuntimeState(config) {
     await ensureDir(config.stateDir);
     await ensureDir(config.sessionsDir);
-    await ensureDir(config.agentDir);
-    await ensureModelsJson(config);
-    const authPath = path.join(config.agentDir, "auth.json");
-    try {
-      await fs.access(authPath);
-    } catch {
-      await fs.writeFile(authPath, "{}\n", "utf8");
-    }
+    await ensureAgentSeedFiles(config.agentDir, config);
   },
   createSessionManager(sessionFile) {
     return SessionManager.open(sessionFile) as unknown as RuntimeSessionManager;

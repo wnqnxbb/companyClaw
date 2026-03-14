@@ -14,11 +14,16 @@ export type ModelDefinition = {
 };
 
 export type RuntimeConfig = {
+  clawHomeDir: string;
+  sharedAgentSeedDir: string;
+  workspaceTemplateDir: string;
   workspaceDir: string;
   stateDir: string;
   agentDir: string;
   sessionsDir: string;
   sessionStorePath: string;
+  agentId?: string;
+  agentRootDir?: string;
   bootstrapFiles: string[];
   runtime: {
     thinkingLevel: string;
@@ -60,6 +65,12 @@ export type BootstrapFile = {
   name: string;
   path: string;
   content: string;
+};
+
+export type AgentMetadata = {
+  name: string;
+  agentId: string;
+  createdAt: string;
 };
 
 export type AgentRunInput = {

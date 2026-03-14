@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
 import { fileExists, readJsonFile } from "./fs-utils.js";
@@ -10,6 +11,7 @@ export const DEFAULT_BOOTSTRAP_FILES = [
   "IDENTITY.md",
   "TOOLS.md",
   "BOOTSTRAP.md",
+  "HEARTBEAT.md",
   "MEMORY.md",
 ] as const;
 
@@ -111,6 +113,7 @@ export async function loadConfig(options?: {
   cwd?: string;
   configPath?: string;
   workspaceDir?: string;
+  clawHomeDir?: string;
 }): Promise<RuntimeConfig> {
   const cwd = path.resolve(options?.cwd ?? process.cwd());
   const configPath = options?.configPath
@@ -128,11 +131,20 @@ export async function loadConfig(options?: {
     workspaceDir,
     parsed.stateDir ?? process.env.COMPANYCLAW_STATE_DIR ?? ".companyclaw",
   );
+  const clawHomeDir = options?.clawHomeDir
+    ? path.resolve(cwd, options.clawHomeDir)
+    : process.env.COMPANYCLAW_HOME_DIR
+      ? path.resolve(cwd, process.env.COMPANYCLAW_HOME_DIR)
+      : path.join(os.homedir(), ".companyclaw");
   const agentDir = path.join(stateDir, "agent");
   const sessionsDir = path.join(stateDir, "sessions");
   const sessionStorePath = path.join(stateDir, "sessions.json");
+  const workspaceTemplateDir = path.join(path.dirname(configPath), "templates", "agent-workspace");
 
   return {
+    clawHomeDir,
+    sharedAgentSeedDir: path.join(clawHomeDir, "agent"),
+    workspaceTemplateDir,
     workspaceDir,
     stateDir,
     agentDir,

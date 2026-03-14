@@ -6,6 +6,7 @@
     "IDENTITY.md",
     "TOOLS.md",
     "BOOTSTRAP.md",
+    "HEARTBEAT.md",
     "MEMORY.md"
   ],
   "runtime": {

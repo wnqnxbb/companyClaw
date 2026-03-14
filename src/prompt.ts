@@ -10,6 +10,7 @@ const FILE_ROLE_HINTS: Record<string, string> = {
   "IDENTITY.md": "代理身份与对外风格",
   "TOOLS.md": "本地环境、工具和模型端点备忘",
   "BOOTSTRAP.md": "首次初始化说明",
+  "HEARTBEAT.md": "运行节奏与近期状态",
   "MEMORY.md": "长期记忆与稳定事实",
 };
 
