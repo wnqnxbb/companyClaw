@@ -1,0 +1,38 @@
+{
+  "bootstrapFiles": [
+    "AGENTS.md",
+    "SOUL.md",
+    "USER.md",
+    "IDENTITY.md",
+    "TOOLS.md",
+    "BOOTSTRAP.md",
+    "MEMORY.md"
+  ],
+  "runtime": {
+    "thinkingLevel": "medium",
+    "timeoutMs": 600000,
+    "execTimeoutMs": 120000,
+    "observability": {
+      "enabled": true,
+      "logDir": "logs",
+      "console": false,
+      "includePrompts": true,
+      "includeToolArgs": true,
+      "includeToolResults": true,
+      "includeAssistantDeltas": true,
+      "includeLlmRequests": true
+    }
+  },
+  "primaryModel": {
+    "provider": "sohu-bpd",
+    "id": "qwen3.5:9b",
+    "api": "openai-completions",
+    "baseUrl": "http://aibook.adrd.sohuno.com/bpd_model/v1",
+    "apiKeyEnv": "SOHU_BPD_API_KEY",
+    "contextWindow": 128000,
+    "maxTokens": 8192,
+    "reasoning": false,
+    "input": ["text"]
+  },
+  "fallbackModels": []
+}
